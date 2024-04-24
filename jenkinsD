@@ -1,0 +1,55 @@
+pipeline{
+
+agent any
+
+tools{
+maven 'maven3.9.6'
+}
+
+//Checkout code
+stages{
+ stage('CheckOuteCode'){
+ steps{
+ git branch: 'qa', changelog: false, credentialsId: 'e754ef5c-62b2-493c-8767-ef54761f1caf', poll: false, url: 'https://github.com/maharshi1806/maven-web-application.git'
+ }
+ }
+ //Build
+ stage('Build'){
+ steps{
+ sh "mvn clean package"
+ }
+ }
+ //Execute SonarQube Report
+ stage('ExecuteSonarQubeReport'){
+ steps{
+ sh "mvn clean sonar:sonar"
+ }
+ }
+ 
+ // Upload Artifcats into Nexus
+ stage('UploadArtifcatsIntoNexus'){
+ steps{
+ sh "mvn clean deploy"
+ }
+ }
+
+//Deploy App into Tomcat Server
+stage('DeployAppIntoTomcat'){
+ steps{
+  sshagent(['bd4e9bf6-0cf8-4fd6-a573-e3268993c16b']) {
+sh "scp -o StrictHostKeyChecking=no target/maven-web-application.war ec2-user@3.83.103.138:/opt/tomcat9/webapps/"
+}
+}
+ }
+}//stages closing
+
+
+post {
+  success {
+    mail bcc: '', body: 'BUILD RUNNING ON DECELERATIVE PIPELINE', cc: '', from: '', replyTo: '', subject: 'BUILD SUCESS ', to: 'vallurusaiteja96@gmail.com'
+  }
+  failure {
+    mail bcc: '', body: 'BUILD RUNNING ON DECELERATIVE PIPELINE', cc: '', from: '', replyTo: '', subject: 'BUILD FAILED ', to: 'vallurusaiteja96@gmail.com'
+  }
+} 
+}//pipeline closing
