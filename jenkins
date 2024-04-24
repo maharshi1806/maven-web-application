@@ -1,0 +1,32 @@
+node('node1')
+{
+
+def mavenHome = tool name : 'maven3.9.6'
+
+stage('CheckOut') {
+
+git branch: 'qa', changelog: false, credentialsId: 'e754ef5c-62b2-493c-8767-ef54761f1caf', poll: false, url: 'https://github.com/maharshi1806/maven-web-application.git'
+}
+
+stage('BuildArtifact'){
+ sh "${mavenHome}/bin/mvn clean package"
+}
+
+stage('SonarQubeReport'){
+ sh "${mavenHome}/bin/mvn sonar:sonar"
+}
+
+stage('UploadArtifactIntoNexus'){
+ sh "${mavenHome}/bin/mvn clean deploy"
+}
+
+stage('DeployAppIntoTomcat'){
+sshagent(['bd4e9bf6-0cf8-4fd6-a573-e3268993c16b']) {
+sh "scp -o StrictHostKeyChecking=no target/maven-web-application.war ec2-user@3.83.103.138:/opt/tomcat9/webapps/"    
+}
+}
+
+stage('SendEmailNotification'){
+mail bcc: '', body: 'BUILD RUNNING ON SCRIPTED PIPELINE', cc: '', from: '', replyTo: '', subject: 'BUILD SUCESS ', to: 'vallurusaiteja96@gmail.com'
+}
+}
